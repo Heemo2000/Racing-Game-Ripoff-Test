@@ -3,6 +3,8 @@ using UnityEngine;
 using Game.Driving;
 using UnityHFSM;
 using System.Collections;
+using Game.Core;
+
 
 
 #if UNITY_EDITOR
@@ -44,6 +46,7 @@ namespace Game.AI
         [SerializeField] private float alignCheckAngle = 60.0f;
 
         [SerializeField] private LayerMask alignCheckLayerMask;
+        [SerializeField] private CastType alignCastType = CastType.Ray;
         
         [Min(3)]
         [SerializeField] private int alignCheckRayCount = 3;
@@ -92,8 +95,8 @@ namespace Game.AI
         private Vector2 input = Vector2.zero;
         private float requiredSteeringInput = 0.0f;
         private int currentWaypointIndex = -1;
-        private bool[] interest;
-        private bool[] danger;
+        private float[] interest;
+        private float[] danger;
         private Coroutine interestAndDangerCoroutine = null;
 
         public Vector2 Input { get => input; }
@@ -130,13 +133,12 @@ namespace Game.AI
 
             for (int i = 0; i < alignCheckRayCount; i++)
             {
-                bool shouldInclude = interest[i];
-
-                if (shouldInclude)
+                float currentInterest = interest[i];
+                if (currentInterest == 0.0f)
                 {
-                    float turnDirection = (middleRayIndex != i) ? Mathf.Sign(i - middleRayIndex) : 0f;
-                    requiredSteeringInput += turnDirection * 1.0f / (float)alignCheckRayCount;
+                    continue;
                 }
+                requiredSteeringInput += currentInterest; 
             }
 
             return requiredSteeringInput;
@@ -215,17 +217,13 @@ namespace Game.AI
 
         private void ResetInterestAndDanger()
         {
-            interest = new bool[alignCheckRayCount];
-            danger = new bool[alignCheckRayCount];
+            interest = new float[alignCheckRayCount];
+            danger = new float[alignCheckRayCount];
 
             for(int i = 0; i < alignCheckRayCount; i++)
             {
-                interest[i] = true;
-            }
-
-            for(int i = 0; i < alignCheckRayCount; i++)
-            {
-                danger[i] = false;
+                interest[i] = 0.0f;
+                danger[i] = 0.0f;
             }
         }
 
@@ -245,14 +243,28 @@ namespace Game.AI
 
                     Vector3 forwardVec = Quaternion.AngleAxis(requiredAngle, transform.up) * transform.forward;
 
-                    bool hitSomething = Physics.Raycast(FrontCheckPos, forwardVec, alignCheckDistance, alignCheckLayerMask.value);
+                    bool hitSomething = false;
 
-                    interest[i] = hitSomething == false;
-                    danger[i] = hitSomething == true;
-
-                    if (danger[i] == true)
+                    switch(alignCastType)
                     {
-                        interest[i] = false;
+                        case CastType.Ray:
+                                            hitSomething = Physics.Raycast(FrontCheckPos, forwardVec, alignCheckDistance, alignCheckLayerMask.value);
+                                            break;
+
+                        case CastType.Sphere:
+                                            hitSomething = Physics.SphereCast(new Ray(FrontCheckPos, forwardVec), 0.5f, alignCheckDistance, alignCheckLayerMask.value);
+                                            break;
+                    }
+
+                    Vector3 direction = (waypoints.Length == 0) ? transform.forward : (waypoints[currentWaypointIndex].position - transform.position).normalized;
+                    float angle = Vector3.SignedAngle(forwardVec, direction, transform.up);
+                    interest[i] =  Mathf.Sign(angle) * Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
+
+                    danger[i] = (hitSomething == true) ? 1.0f : 0.0f;
+
+                    if (danger[i] == 1.0f)
+                    {
+                        interest[i] = 0.0f;
                     }
                 }
 

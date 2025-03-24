@@ -901,7 +901,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0552b7b75df29749ad0e7670b47d176, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  waypointChangeDist: 45
+  waypointChangeDist: 42
   speedReduceDistance: 50
   cornerCheckMinAngle: 30
   waypointCheckAngle: 70
@@ -912,8 +912,9 @@ MonoBehaviour:
   alignCheckLayerMask:
     serializedVersion: 2
     m_Bits: 137
+  alignCastType: 1
   alignCheckRayCount: 8
-  alignCheckTime: 0.5
+  alignCheckTime: 0.1
   ignoreInputRange: 0.05
   frontCheckOffset: {x: 0, y: 1, z: 5.1}
   rearCheckOffset: {x: 0, y: 1, z: -5.1}
