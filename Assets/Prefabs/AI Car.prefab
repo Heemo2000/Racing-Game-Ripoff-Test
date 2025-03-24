@@ -360,7 +360,7 @@ Transform:
   m_GameObject: {fileID: 4264559638686478835}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0, y: 0.93, z: 5.04}
+  m_LocalPosition: {x: -0, y: 0.93, z: 8.65}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -616,7 +616,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6342412310064965074}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.81915206, z: 0, w: 0.57357645}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -206, y: 27, z: -181}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -627,7 +627,7 @@ Transform:
   - {fileID: 8754407693294806737}
   - {fileID: 1281371317759939084}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 110, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2871801631150031682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -809,8 +809,9 @@ MonoBehaviour:
     m_Bits: 1
   springStrength: 8000
   damperStrength: 2000
-  steeringInputTime: 0.1
-  accelerateInputTime: 0.1
+  interpolatedInput: 1
+  steeringInputTime: 0.05
+  accelerateInputTime: 0.05
   gravity: 10
   maxTorque: 10000
   powerCurve:
@@ -856,7 +857,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   forwardSpeed: 50
-  reverseSpeed: 10
+  reverseSpeed: 30
   turnRadius: 10.79999
   antiRollbarEnabled: 1
   stiffness: 1000
@@ -900,22 +901,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0552b7b75df29749ad0e7670b47d176, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  waypointChangeDist: 22.5
-  speedReduceDistance: 25
-  cornerCheckMinAngle: 5
-  waypointCheckAngle: 5
+  waypointChangeDist: 45
+  speedReduceDistance: 50
+  cornerCheckMinAngle: 30
+  waypointCheckAngle: 70
   followWaypointEnabled: 1
   waypoints: []
-  alignCheckPoint: {fileID: 8754407693294806737}
-  alignCheckDistance: 8
-  alignCheckAngle: 150
+  alignCheckDistance: 48
+  alignCheckAngle: 180
   alignCheckLayerMask:
     serializedVersion: 2
     m_Bits: 137
-  alignCheckRayCount: 10
-  ignoreInputRange: 0.01
-  frontCheck: {fileID: 8754407693294806737}
-  rearCheck: {fileID: 1281371317759939084}
+  alignCheckRayCount: 8
+  alignCheckTime: 0.5
+  ignoreInputRange: 0.05
+  frontCheckOffset: {x: 0, y: 1, z: 5.1}
+  rearCheckOffset: {x: 0, y: 1, z: -5.1}
   blockingCheckDistance: 1
   blockCheckLayerMask:
     serializedVersion: 2
@@ -923,6 +924,7 @@ MonoBehaviour:
   blockCheckRayCount: 1
   blockCheckAngle: 90
   deflectionCheckAngle: 60
+  showStateHierarchy: 0
 --- !u!1 &7211178386474464940
 GameObject:
   m_ObjectHideFlags: 0

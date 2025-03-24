@@ -5,6 +5,7 @@ using Unity.Cinemachine;
 using Game.AI;
 using Game.PlayerManagement;
 using Game.Driving;
+using AYellowpaper.SerializedCollections;
 
 namespace Game.TrackManagement
 {
@@ -18,11 +19,14 @@ namespace Game.TrackManagement
         [SerializeField] private RaceType raceType;
         [Min(2)]
         [SerializeField] private int lapsCount = 2;
-        [Min(0.1f)]
+        [Min(0.01f)]
         [SerializeField] private float checkRacersInterval = 0.5f;
-        
+        [SerializeField]
+        [SerializedDictionary("ID", "Racer Data")]
+        private SerializedDictionary<int, RaceDriverData> raceDriverDatas;
+
         private List<Car> racers;
-        private Dictionary<int, RaceDriverData> raceDriverDatas;
+
         private List<string> randomRacerNames;
         private int reachedEndLineCount = 0;
         private Transform[] waypoints = null;
@@ -61,7 +65,11 @@ namespace Game.TrackManagement
                 }
                 car.enabled = false;
                 racers.Add(car);
-                raceDriverDatas.Add(car.gameObject.GetInstanceID(), new RaceDriverData());
+
+                var data = new RaceDriverData(randomRacerNames[Random.Range(0, randomRacerNames.Count)], i);
+
+                raceDriverDatas.Add(car.gameObject.GetInstanceID(), data);
+                
             }
 
             StartCoroutine(EnableCarComponent());
@@ -96,12 +104,16 @@ namespace Game.TrackManagement
                     controller.FollowWaypointEnabled = true;
                 }
             }
+
+            reachedEndLineCount = 0;
             var wait = new WaitForSeconds(checkRacersInterval);
             while(reachedEndLineCount != racers.Count)
             {
                 foreach(Car car in racers)
                 {
                     float percent = FindRiderCompleteProgress(car);
+                    Debug.Log("Complete Percent for " + car.transform.name + " :" + percent);
+
                     if(percent == 1.0f)
                     {
                         if(car.TryGetComponent<Player>(out Player player))
@@ -115,9 +127,13 @@ namespace Game.TrackManagement
 
                         reachedEndLineCount++;
                     }
+
+                    yield return null;
                 }
                 yield return wait;
             }
+
+            Debug.Log("All racers reached end line");
         }
 
         private float FindRiderCompleteProgress(Car car)
@@ -183,7 +199,7 @@ namespace Game.TrackManagement
         private void Awake()
         {
             racers = new List<Car>();
-            raceDriverDatas = new Dictionary<int, RaceDriverData>();
+            raceDriverDatas = new SerializedDictionary<int, RaceDriverData>();
             
             randomRacerNames = new List<string>();
             randomRacerNames.Add("Chungu");

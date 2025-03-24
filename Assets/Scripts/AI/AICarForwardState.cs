@@ -22,11 +22,17 @@ namespace Game.AI
 
         public override void OnEnter()
         {
-            
+            calculatedInput.x = 0.0f;
+            calculatedInput.y = 0.0f;
         }
 
         public override void OnLogic()
         {
+            if(controller.Waypoints.Length == 0)
+            {
+                return;
+            }
+
             if(controller.CurrentWaypointIndex >= controller.Waypoints.Length)
             {
                 controller.CurrentWaypointIndex = 0;
@@ -36,29 +42,42 @@ namespace Game.AI
 
             //Steering input.
             Vector3 currentWaypointPos = controller.Waypoints[controller.CurrentWaypointIndex].position;
-            Vector3 direction = controller.Waypoints[controller.CurrentWaypointIndex].forward;    //(currentWaypointPos - controller.FrontCheck.position).normalized;
+            Vector3 direction = (currentWaypointPos - carTransform.position).normalized;
+            //Vector3 currentWaypointForward = controller.Waypoints[controller.CurrentWaypointIndex].forward;
 
-            float dot = Vector3.Dot(carTransform.forward, direction);
-            //Debug.Log("Dot: " + dot);
+            float angle = Mathf.Clamp(Vector3.SignedAngle(carTransform.forward, direction, Vector3.up), -controller.WaypointCheckAngle/2.0f, controller.WaypointCheckAngle/2.0f);
 
-            float angle = Vector3.SignedAngle(direction, carTransform.forward, carTransform.up);
-            Debug.Log("Angle: " + angle);
-            float steeringSign = -Mathf.Sign(angle);
-            
-            //Debug.Log("Steering sign: " + steeringSign);
+            Debug.DrawLine(carTransform.position, carTransform.position + direction * 5.0f, Color.yellow);
+            Debug.DrawLine(carTransform.position, carTransform.position + carTransform.forward * 5.0f, Color.red);
 
-            float normalSteeringInput = steeringSign * (1.0f - dot); //Mathf.Clamp(angle / 30.0f, -1.0f , 1.0f); 
+            //Debug.Log("Angle: " + angle);
+
+            float steeringSign = Mathf.Sign(angle);
+
+            float leftWheelAngle = controller.NormalLeftWheelAngle;
+            float rightWheelAngle = controller.NormalRightWheelAngle;
+
+            //Debug.Log("Left Wheel Angle: " + leftWheelAngle);
+            //Debug.Log("Right Wheel Angle: " + rightWheelAngle);
+
+            float steeringAmount = Mathf.Abs(angle) / Mathf.Abs(Mathf.Max(leftWheelAngle, 
+                                                                          rightWheelAngle));
+
+            float normalSteeringInput = steeringSign * steeringAmount;
 
             //Debug.Log("Normal steering input: " + normalSteeringInput);
 
             float alignedSteeringInput = controller.GetAlignedSteeringInput();
+            
             //Debug.Log("Aligned steering input: " + alignedSteeringInput);
 
-            calculatedInput.x = normalSteeringInput + alignedSteeringInput;
-            /*if(calculatedInput.x >= -controller.IgnoreInputRange && calculatedInput.x <= controller.IgnoreInputRange)
+            calculatedInput.x = Mathf.Clamp(normalSteeringInput + alignedSteeringInput , -1.0f, 1.0f);
+            Debug.Log("Steering input: " + calculatedInput.x);
+            
+            if(calculatedInput.x >= -controller.IgnoreInputRange && calculatedInput.x <= controller.IgnoreInputRange)
             {
                 calculatedInput.x = 0.0f;
-            }*/
+            }
 
             //Debug.Log("Steering input: " + calculatedInput.x);
 
@@ -67,16 +86,15 @@ namespace Game.AI
             //Check for goddamn corners, if there is not, then accelerate like the drunk driver.
             //Also check for next waypoint.
 
-            if(IsReachingCorner())
+            bool reachingCorner = IsReachingCorner(out float slowdownAccInput);
+            if (reachingCorner)
             {
-                calculatedInput.y = 0.2f;
-            }
-            else
-            {
-                calculatedInput.y = 1.0f;
+                //Debug.Log("Reaching corner");   
             }
 
-            float wayPtSqrDistance = Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheck.position);
+            calculatedInput.y = slowdownAccInput;
+
+            float wayPtSqrDistance = Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheckPos);
             if(wayPtSqrDistance <= controller.WaypointChangeDist * controller.WaypointChangeDist)
             {
                 controller.CurrentWaypointIndex++;
@@ -91,28 +109,37 @@ namespace Game.AI
             
         }
 
-        private bool IsReachingCorner()
+        private bool IsReachingCorner(out float slowdownAcceleratingInput)
         {
             if(controller.CurrentWaypointIndex + 1 >= controller.Waypoints.Length)
             {
+                slowdownAcceleratingInput = 1.0f;
                 return false;
             }
 
             Vector3 currentWaypointPos = controller.Waypoints[controller.CurrentWaypointIndex].position;
             Vector3 nextWaypointPos = controller.Waypoints[controller.CurrentWaypointIndex + 1].position;
 
-            Vector3 currentDir = (currentWaypointPos - controller.FrontCheck.position).normalized;
+            Vector3 previousPos = (controller.CurrentWaypointIndex - 1 >= 0) ? 
+                                  controller.Waypoints[controller.CurrentWaypointIndex - 1].position : 
+                                  carTransform.position;
+
+            Vector3 currentDir = (currentWaypointPos - previousPos).normalized;
             Vector3 nextWayPtdirection = (nextWaypointPos - currentWaypointPos).normalized;
 
-            float angle = Vector3.Angle(currentDir, nextWayPtdirection);
-            //Debug.Log("corner angle: " + angle);
+            float angle = Vector3.SignedAngle(currentDir, nextWayPtdirection, Vector3.up);
+            Debug.Log("Corner angle: " + angle);
             float speedReduceDistSqr = controller.SpeedReduceDistance * controller.SpeedReduceDistance;
-            if (angle >= controller.CornerCheckMinAngle/2f && 
-               Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheck.position) <= speedReduceDistSqr)
+            float sqrDistance = Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheckPos);
+
+            
+            if (!(angle >= -controller.CornerCheckMinAngle/2.0f && angle <= controller.CornerCheckMinAngle/2.0f) && sqrDistance <= speedReduceDistSqr)
             {
+                slowdownAcceleratingInput = sqrDistance / speedReduceDistSqr;
                 return true;
             }
 
+            slowdownAcceleratingInput = 1.0f;
             return false;
         }
     }

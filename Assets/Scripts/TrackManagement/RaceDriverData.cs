@@ -1,13 +1,15 @@
-
+using UnityEngine;
 
 namespace Game.TrackManagement
 {
-    public struct RaceDriverData
+    [System.Serializable]
+    public class RaceDriverData
     {
-        private string name;
-        private int ranking;
-        private float completeProgress;
-        private float completedLaps;
+
+        [SerializeField] private string name;
+        [SerializeField] private int ranking;
+        [SerializeField] private float completeProgress;
+        [SerializeField] private float completedLaps;
         public string Name { get => name; set => name = value; }
         public int Ranking { get => ranking; set => ranking = value; }
 

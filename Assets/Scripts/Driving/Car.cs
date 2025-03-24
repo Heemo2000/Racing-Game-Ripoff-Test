@@ -47,7 +47,8 @@ namespace Game.Driving
         
         [Min(0.1f)]
         [SerializeField] private float damperStrength = 1.0f;
-        
+
+        [SerializeField] private bool interpolatedInput = true;
         [Min(0.001f)]
         [SerializeField] private float steeringInputTime = 1.0f;
 
@@ -103,7 +104,17 @@ namespace Game.Driving
 
         public Vector2 Input { get => input; set => input = value; }
 
+        public float GetNormalLeftWheelAngle()
+        {
+            float leftWheelAngle = Mathf.Rad2Deg * Mathf.Atan(wheelBase / (turnRadius + (rearTrack / 2.0f)));
+            return leftWheelAngle;
+        }
 
+        public float GetNormalRightWheelAngle()
+        {
+            float rightWheelAngle = Mathf.Rad2Deg * Mathf.Atan(wheelBase / (turnRadius - (rearTrack / 2.0f)));
+            return rightWheelAngle;
+        }
         private float GetCurrentSpeed()
         {
             return Vector3.Dot(transform.forward, carRB.linearVelocity);
@@ -382,6 +393,14 @@ namespace Game.Driving
                 return; 
             }
 
+            if(!interpolatedInput)
+            {
+                currentInput.x = input.x;
+                currentInput.y = input.y;
+                return;
+            }
+
+
             currentInput.x = Mathf.SmoothDamp(currentInput.x, input.x, ref tempVelocityX, steeringInputTime);
             currentInput.y = Mathf.SmoothDamp(currentInput.y, input.y, ref tempVelocityY, accelerateInputTime);
 
@@ -496,6 +515,7 @@ namespace Game.Driving
                 Gizmos.DrawLine(wheelRL.suspension.position, wheelRR.suspension.position);
             }
 
+            //For displaying turn radius.
             if(wheelRL != null && wheelRL.suspension != null)
             {
                 Gizmos.color = Color.yellow;
