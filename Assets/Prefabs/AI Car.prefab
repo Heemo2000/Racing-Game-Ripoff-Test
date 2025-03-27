@@ -862,6 +862,8 @@ MonoBehaviour:
   antiRollbarEnabled: 1
   stiffness: 1000
   rollAngle: 2
+  resetOrientationTime: 5
+  resetPositionOffsetY: 10
 --- !u!54 &6950114418960471767
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -903,7 +905,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   waypointChangeDist: 42
   speedReduceDistance: 50
-  cornerCheckMinAngle: 30
+  cornerCheckMinAngle: 15
   waypointCheckAngle: 70
   followWaypointEnabled: 1
   waypoints: []
@@ -918,13 +920,15 @@ MonoBehaviour:
   ignoreInputRange: 0.05
   frontCheckOffset: {x: 0, y: 1, z: 5.1}
   rearCheckOffset: {x: 0, y: 1, z: -5.1}
-  blockingCheckDistance: 1
+  blockingCheckDistance: 10
   blockCheckLayerMask:
     serializedVersion: 2
     m_Bits: 137
   blockCheckRayCount: 1
   blockCheckAngle: 90
-  deflectionCheckAngle: 60
+  blockCheckTime: 0.5
+  deflectionCheckAngle: 180
+  deflectionCheckTime: 0.5
   showStateHierarchy: 0
 --- !u!1 &7211178386474464940
 GameObject:

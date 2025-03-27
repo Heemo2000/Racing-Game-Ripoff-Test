@@ -73,12 +73,17 @@ namespace Game.AI
         
         [Range(60.0f, 180.0f)]
         [SerializeField] private float blockCheckAngle = 90.0f;
+
+        [Min(0.01f)]
+        [SerializeField] private float blockCheckTime = 2.0f;
         
         [Space(10.0f)]
         [Header("Deflection Settings: ")]
 
         [Min(60.0f)]
         [SerializeField] private float deflectionCheckAngle = 65.0f;
+        [Min(0.01f)]
+        [SerializeField] private float deflectionCheckTime = 2.0f;
 
         [Space(10.0f)]
         [SerializeField] private bool showStateHierarchy = false;
@@ -95,10 +100,16 @@ namespace Game.AI
         private Vector2 input = Vector2.zero;
         private float requiredSteeringInput = 0.0f;
         private int currentWaypointIndex = -1;
-        private float[] interest;
-        private float[] danger;
-        private Coroutine interestAndDangerCoroutine = null;
 
+        private float[] interest;
+        private bool[] danger;
+        private Coroutine interestAndDangerCoroutine = null;
+        private RaycastHit alignHit;
+        private float currentBlockTime = 0.0f;
+        private float currentDeflectTime = 0.0f;
+        private bool forwardBlocked = false;
+        private bool backwardBlocked = false;
+        private bool deflected = false;
         public Vector2 Input { get => input; }
         public int CurrentWaypointIndex { get => currentWaypointIndex; set => currentWaypointIndex = value; }
         public Transform[] Waypoints { get => waypoints; set => waypoints = value; }
@@ -165,22 +176,40 @@ namespace Game.AI
 
         private bool IsBlockingForward()
         {
-            return CheckObstacles(FrontCheckPos, 
-                                  transform.forward, 
-                                  blockCheckRayCount,
-                                  blockCheckAngle, 
-                                  blockingCheckDistance, 
-                                  blockCheckLayerMask.value);
-        }
+            if(currentBlockTime < blockCheckTime)
+            {
+                currentBlockTime += Time.deltaTime;
+                return forwardBlocked;
+            }
 
-        private bool IsBlockingBackward()
-        {
-            return CheckObstacles(RearCheckPos,
+            currentBlockTime = 0.0f;
+            forwardBlocked = CheckObstacles(FrontCheckPos,
                                   transform.forward,
                                   blockCheckRayCount,
                                   blockCheckAngle,
                                   blockingCheckDistance,
                                   blockCheckLayerMask.value);
+            return forwardBlocked;
+        }
+
+        private bool IsBlockingBackward()
+        {
+            if (currentBlockTime < blockCheckTime)
+            {
+                currentBlockTime += Time.deltaTime;
+                return backwardBlocked;
+            }
+
+            currentBlockTime = 0.0f;
+
+            backwardBlocked = CheckObstacles(RearCheckPos,
+                                  transform.forward,
+                                  blockCheckRayCount,
+                                  blockCheckAngle,
+                                  blockingCheckDistance,
+                                  blockCheckLayerMask.value);
+
+            return backwardBlocked;
         }
 
         private bool IsTooDeflectedFromWaypoint()
@@ -190,10 +219,20 @@ namespace Game.AI
                 return false;
             }
 
-            
-            float angle = Vector3.SignedAngle(transform.forward, waypoints[currentWaypointIndex].forward, Vector3.up);
+            if(currentDeflectTime < deflectionCheckTime)
+            {
+                currentDeflectTime += Time.deltaTime;
+                return deflected;
+            }
+
+            currentDeflectTime = 0.0f;
+
+            Vector3 direction = (waypoints[currentWaypointIndex].position - transform.position).normalized;
+            float angle = Vector3.SignedAngle(transform.forward, direction, Vector3.up);
             //Debug.Log("Current deflection angle: " + angle);
-            return !(angle >= -deflectionCheckAngle/2f && angle <= deflectionCheckAngle/2.0f);
+            
+            deflected = !(angle >= -deflectionCheckAngle / 2f && angle <= deflectionCheckAngle / 2.0f);
+            return deflected;
         }
 
         private bool CheckObstacles(Vector3 origin, Vector3 direction, int rayCount, float checkAngle, 
@@ -218,12 +257,12 @@ namespace Game.AI
         private void ResetInterestAndDanger()
         {
             interest = new float[alignCheckRayCount];
-            danger = new float[alignCheckRayCount];
+            danger = new bool[alignCheckRayCount];
 
             for(int i = 0; i < alignCheckRayCount; i++)
             {
                 interest[i] = 0.0f;
-                danger[i] = 0.0f;
+                danger[i] = false;
             }
         }
 
@@ -233,6 +272,11 @@ namespace Game.AI
 
             while(this.enabled)
             {
+                if(currentWaypointIndex == -1)
+                {
+                    yield return null;
+                    continue;
+                }
                 int middleRayIndex = (alignCheckRayCount == 1) ? 0 : Mathf.CeilToInt(alignCheckRayCount / 2.0f);
 
                 for (int i = 0; i < alignCheckRayCount; i++)
@@ -248,21 +292,32 @@ namespace Game.AI
                     switch(alignCastType)
                     {
                         case CastType.Ray:
-                                            hitSomething = Physics.Raycast(FrontCheckPos, forwardVec, alignCheckDistance, alignCheckLayerMask.value);
+                                            hitSomething = Physics.Raycast(FrontCheckPos, forwardVec, out alignHit ,alignCheckDistance, alignCheckLayerMask.value);
                                             break;
 
                         case CastType.Sphere:
-                                            hitSomething = Physics.SphereCast(new Ray(FrontCheckPos, forwardVec), 0.5f, alignCheckDistance, alignCheckLayerMask.value);
+                                            hitSomething = Physics.SphereCast(new Ray(FrontCheckPos, forwardVec), 0.5f, out alignHit, alignCheckDistance, alignCheckLayerMask.value);
                                             break;
                     }
 
-                    Vector3 direction = (waypoints.Length == 0) ? transform.forward : (waypoints[currentWaypointIndex].position - transform.position).normalized;
-                    float angle = Vector3.SignedAngle(forwardVec, direction, transform.up);
-                    interest[i] =  Mathf.Sign(angle) * Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
+                    Vector3 direction = (waypoints.Length == 0 || currentWaypointIndex == -1) ? transform.forward : (waypoints[currentWaypointIndex].position - transform.position).normalized;
+                    float steeringSign = Mathf.Sign(i - middleRayIndex);
 
-                    danger[i] = (hitSomething == true) ? 1.0f : 0.0f;
+                    float steerPercent = 1.0f - alignHit.distance / alignCheckDistance;
+                    float actualSteerAmount = Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
 
-                    if (danger[i] == 1.0f)
+                    if(steeringSign == 0 || !hitSomething)
+                    {
+                        interest[i] = 0.0f;
+                    }
+                    else
+                    {
+                        interest[i] = steeringSign * steerPercent * actualSteerAmount;
+                    }
+
+                    danger[i] = hitSomething == true;
+
+                    if (danger[i] == true)
                     {
                         interest[i] = 0.0f;
                     }
@@ -307,8 +362,8 @@ namespace Game.AI
             mainFSM.AddTransition(new Transition(STOP_STATE, DRIVE_STATE, (transition)=> followWaypointEnabled == true));
             mainFSM.AddTransition(new Transition(DRIVE_STATE, STOP_STATE, (transition)=> followWaypointEnabled == false));
 
-            driveFSM.AddTransition(new Transition(FORWARD_STATE, REVERSE_STATE, (transition) => input.y > 0.0f && (IsTooDeflectedFromWaypoint() || IsBlockingForward())));
-            driveFSM.AddTransition(new Transition(REVERSE_STATE, FORWARD_STATE, (transition) => input.y < 0.0f && (!IsTooDeflectedFromWaypoint() || IsBlockingBackward())));
+            driveFSM.AddTransition(new Transition(FORWARD_STATE, REVERSE_STATE, (transition) => (IsTooDeflectedFromWaypoint() || IsBlockingForward())));
+            driveFSM.AddTransition(new Transition(REVERSE_STATE, FORWARD_STATE, (transition) => (!IsTooDeflectedFromWaypoint() || IsBlockingBackward())));
         }
 
         

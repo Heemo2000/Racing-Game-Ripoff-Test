@@ -84,6 +84,9 @@ namespace Game.Driving
         [Min(0.1f)]
         [SerializeField] private float rollAngle = 1.0f;
 
+        [Min(1.5f)]
+        [SerializeField] private float resetOrientationTime = 3.0f;
+        [SerializeField] private float resetPositionOffsetY = 5.0f;
         
         private Rigidbody carRB;
         private Collider carCollider;
@@ -93,6 +96,7 @@ namespace Game.Driving
         private Vector2 currentInput = Vector2.zero;
         
         private int groundChecksCount = 0;
+        private Coroutine resetOrientationCoroutine = null;
         
         private float tempVelocityX = 0.0f;
         private float tempVelocityY = 0.0f;
@@ -103,6 +107,7 @@ namespace Game.Driving
         private Coroutine dampingCoroutine = null;
 
         public Vector2 Input { get => input; set => input = value; }
+        public bool IsGrounded { get => Vector3.Dot(transform.up, Vector3.up) > 0.0f; }
 
         public float GetNormalLeftWheelAngle()
         {
@@ -354,6 +359,39 @@ namespace Game.Driving
                 data.wheelGraphic.localEulerAngles = wheelAngle;
             }
         }
+
+        private void HandleOrientation()
+        {
+            if(GetNormalizedSpeed() > 0.05f || IsGrounded)
+            {
+                return; 
+            }
+            
+            if(resetOrientationCoroutine == null)
+            {
+                resetOrientationCoroutine = StartCoroutine(ResetOrientation());
+            }
+        }
+
+        private IEnumerator ResetOrientation()
+        {
+            yield return new WaitForSeconds(resetOrientationTime);
+
+            carRB.isKinematic = true;
+
+            Vector3 eulerAngles = transform.eulerAngles;
+            eulerAngles.x = 0.0f;
+            eulerAngles.z = 0.0f;
+
+            transform.position += Vector3.up * resetPositionOffsetY;
+            transform.eulerAngles = eulerAngles;
+
+            carRB.isKinematic = false;
+
+            yield return new WaitUntil(() => !IsGrounded);
+            resetOrientationCoroutine = null;
+        }
+
         private void Setup()
         {
             carRB.isKinematic = false;
@@ -450,6 +488,7 @@ namespace Game.Driving
             ApplyGravity();
 
             HandleDampOnTouchingGround();
+            HandleOrientation();
 
             HandleSteering();
 

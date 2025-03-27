@@ -37,10 +37,12 @@ namespace Game.AI
 
             float angle = Mathf.Clamp(Vector3.SignedAngle(carTransform.forward, direction, Vector3.up), -controller.WaypointCheckAngle / 2.0f, controller.WaypointCheckAngle / 2.0f);
 
+            float steeringSign = Mathf.Sign(angle);
+
             float steeringAmount = Mathf.Abs(angle) / Mathf.Abs(Mathf.Max(controller.NormalLeftWheelAngle,
                                                                           controller.NormalRightWheelAngle));
 
-            calculatedInput.x = -steeringAmount;
+            calculatedInput.x = -steeringSign * steeringAmount;
             calculatedInput.y = -1.0f;
 
             controller.SetInput(calculatedInput.x, calculatedInput.y);

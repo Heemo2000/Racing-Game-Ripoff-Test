@@ -564,6 +564,7 @@ MonoBehaviour:
     m_Bits: 1
   springStrength: 8000
   damperStrength: 2000
+  interpolatedInput: 1
   steeringInputTime: 0.1
   accelerateInputTime: 0.1
   gravity: 10
@@ -616,6 +617,8 @@ MonoBehaviour:
   antiRollbarEnabled: 1
   stiffness: 1000
   rollAngle: 2
+  resetOrientationTime: 5
+  resetPositionOffsetY: 10
 --- !u!54 &5060018957504356674
 Rigidbody:
   m_ObjectHideFlags: 0
