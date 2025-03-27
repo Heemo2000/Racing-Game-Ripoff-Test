@@ -21,12 +21,13 @@ namespace Game.TrackManagement
         [SerializeField] private int lapsCount = 2;
         [Min(0.01f)]
         [SerializeField] private float checkRacersInterval = 0.5f;
+        
         [SerializeField]
         [SerializedDictionary("ID", "Racer Data")]
         private SerializedDictionary<int, RaceDriverData> raceDriverDatas;
 
         private List<Car> racers;
-
+        
         private List<string> randomRacerNames;
         private int reachedEndLineCount = 0;
         private Transform[] waypoints = null;
@@ -107,11 +108,20 @@ namespace Game.TrackManagement
 
             reachedEndLineCount = 0;
             var wait = new WaitForSeconds(checkRacersInterval);
-            while(reachedEndLineCount != racers.Count)
+            while(!DoAllRacersReachedEnd())
             {
-                foreach(Car car in racers)
+                for(int i = 0; i < racers.Count; i++)
                 {
+                    Car car = racers[i];
+                    var id = car.gameObject.GetInstanceID();
+                    var data = raceDriverDatas[id];
+                    if(data.ReachedEndOfTrack)
+                    {
+                        yield return null;
+                        continue;
+                    }
                     float percent = FindRiderCompleteProgress(car);
+
                     Debug.Log("Complete Percent for " + car.transform.name + " :" + percent);
 
                     if(percent == 1.0f)
@@ -124,8 +134,8 @@ namespace Game.TrackManagement
                         {
                             controller.FollowWaypointEnabled = false;
                         }
-
-                        reachedEndLineCount++;
+                        data.ReachedEndOfTrack = true;
+                        raceDriverDatas[id] = data;
                     }
 
                     yield return null;
@@ -134,6 +144,19 @@ namespace Game.TrackManagement
             }
 
             Debug.Log("All racers reached end line");
+        }
+
+        private bool DoAllRacersReachedEnd()
+        {
+            foreach(var data in raceDriverDatas.Values)
+            {
+                if(!data.ReachedEndOfTrack)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private float FindRiderCompleteProgress(Car car)
@@ -155,8 +178,7 @@ namespace Game.TrackManagement
             }
 
             int lastIndex = waypoints.Length - 1;
-            if (Vector3.Dot(car.transform.forward, waypoints[lastIndex].forward) < 0.0f || 
-               (closestWayPtIndex == lastIndex && car.Input.y < 0.0f))
+            if (closestWayPtIndex == lastIndex && car.Input.y < 0.0f)
             {
                 return -1.0f;
             }
@@ -167,7 +189,7 @@ namespace Game.TrackManagement
             switch (raceType)
             {
                 case RaceType.Sprint:
-                                      float individualSprintPercent = closestWayPtIndex / lastIndex;
+                                      float individualSprintPercent = (float)closestWayPtIndex / (float)lastIndex;
                                       
                                       data.CompleteProgress = individualSprintPercent;
                                       raceDriverDatas[car.gameObject.GetInstanceID()] = data;
@@ -175,16 +197,24 @@ namespace Game.TrackManagement
                                       return individualSprintPercent;
                 case RaceType.Circuit:
 
-                                      float individualLapPercent = closestWayPtIndex / 
-                                                                lastIndex;
+                                      float individualLapPercent = (float)closestWayPtIndex / 
+                                                                (float)lastIndex;
+
+                                      Debug.Log("Individual Lap Percent: " + individualLapPercent);
                                       
-                                      if(individualLapPercent == 1.0f)
+                                      if(data.HasCompletedLap == true && individualLapPercent != 1.0f && individualLapPercent >= 0.5f)
+                                      {
+                                          data.HasCompletedLap = false;
+                                      }
+
+                                      if(!data.HasCompletedLap && individualLapPercent >= 0.99f)
                                       {
                                         data.CompletedLaps++;
+                                        data.HasCompletedLap = true;
                                       }
 
                                       float totalPercent = (data.CompletedLaps * lastIndex + closestWayPtIndex) /
-                                                           (lapsCount * lastIndex);
+                                                           (float)((lapsCount + 1) * lastIndex);
 
                                       data.CompleteProgress = totalPercent;
                                       raceDriverDatas[car.gameObject.GetInstanceID()] = data;
@@ -200,7 +230,7 @@ namespace Game.TrackManagement
         {
             racers = new List<Car>();
             raceDriverDatas = new SerializedDictionary<int, RaceDriverData>();
-            
+
             randomRacerNames = new List<string>();
             randomRacerNames.Add("Chungu");
             randomRacerNames.Add("Mangu");
