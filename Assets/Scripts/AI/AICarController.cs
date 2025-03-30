@@ -4,6 +4,8 @@ using Game.Driving;
 using UnityHFSM;
 using System.Collections;
 using Game.Core;
+using UnityHFSM.Visualization;
+
 
 
 
@@ -89,6 +91,7 @@ namespace Game.AI
         [SerializeField] private bool showStateHierarchy = false;
         
         private Car car;
+        private Animator carAnimator;
 
         private StateMachine mainFSM;
         private StateMachine driveFSM;
@@ -172,6 +175,8 @@ namespace Game.AI
             }
 
             mainFSM.OnLogic();
+
+            HfsmAnimatorGraph.PreviewStateMachineInAnimator(mainFSM, carAnimator);
         }
 
         private bool IsBlockingForward()
@@ -346,6 +351,8 @@ namespace Game.AI
         private void Awake()
         {
             car = GetComponent<Car>();
+            carAnimator = GetComponent<Animator>();
+
             mainFSM = new StateMachine();
             driveFSM = new StateMachine();
             stopState = new AICarStopState(this);
@@ -364,6 +371,10 @@ namespace Game.AI
 
             driveFSM.AddTransition(new Transition(FORWARD_STATE, REVERSE_STATE, (transition) => (IsTooDeflectedFromWaypoint() || IsBlockingForward())));
             driveFSM.AddTransition(new Transition(REVERSE_STATE, FORWARD_STATE, (transition) => (!IsTooDeflectedFromWaypoint() || IsBlockingBackward())));
+
+            HfsmAnimatorGraph.CreateAnimatorFromStateMachine(mainFSM, 
+                                                             "Assets/DebugAnimators", 
+                                                             "AIControllerAnimator.controller");
         }
 
         
