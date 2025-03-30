@@ -26,8 +26,9 @@ namespace Game.Core
             int secondsLeft = 3;
             while(secondsLeft > 0)
             {
-                yield return new WaitForSeconds(1.0f);
+                
                 OnSecondsLeft?.Invoke(secondsLeft);
+                yield return new WaitForSeconds(1.0f);
                 secondsLeft--;
             }
 

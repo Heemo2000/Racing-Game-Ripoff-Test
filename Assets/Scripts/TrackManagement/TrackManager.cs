@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using Unity.Cinemachine;
 using Game.AI;
 using Game.PlayerManagement;
 using Game.Driving;
 using AYellowpaper.SerializedCollections;
+using System.Linq;
 
 namespace Game.TrackManagement
 {
@@ -26,11 +28,13 @@ namespace Game.TrackManagement
         [SerializedDictionary("ID", "Racer Data")]
         private SerializedDictionary<int, RaceDriverData> raceDriverDatas;
 
+        public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnCheckingRacersStarted;
+        public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnRacerDataUpdated;
         private List<Car> racers;
         
         private List<string> randomRacerNames;
-        private int reachedEndLineCount = 0;
         private Transform[] waypoints = null;
+        private int tempRanking = 1;
 
         public void InitializeTrack()
         {
@@ -67,8 +71,8 @@ namespace Game.TrackManagement
                 car.enabled = false;
                 racers.Add(car);
 
-                var data = new RaceDriverData(randomRacerNames[Random.Range(0, randomRacerNames.Count)], i);
-
+                var data = new RaceDriverData(randomRacerNames[Random.Range(0, randomRacerNames.Count)], i, lapsCount);
+                data.IsPlayer = i == 0;
                 raceDriverDatas.Add(car.gameObject.GetInstanceID(), data);
                 
             }
@@ -79,6 +83,7 @@ namespace Game.TrackManagement
         public void StartCheckingRacers()
         {
             StartCoroutine(CheckRacers());
+            OnCheckingRacersStarted?.Invoke(raceDriverDatas.Values);
         }
 
         private IEnumerator EnableCarComponent()
@@ -106,7 +111,6 @@ namespace Game.TrackManagement
                 }
             }
 
-            reachedEndLineCount = 0;
             var wait = new WaitForSeconds(checkRacersInterval);
             while(!DoAllRacersReachedEnd())
             {
@@ -140,9 +144,23 @@ namespace Game.TrackManagement
 
                     yield return null;
                 }
+
+                var rankQuery = raceDriverDatas.
+                                OrderByDescending(data => data.Value.CompleteProgress);
+
+                tempRanking = 1;
+
+                foreach(var result in rankQuery)
+                {
+                    raceDriverDatas[result.Key].Ranking = tempRanking;
+                    tempRanking++;
+                }
+
+                OnRacerDataUpdated?.Invoke(raceDriverDatas.Values);
                 yield return wait;
             }
 
+            
             Debug.Log("All racers reached end line");
         }
 
@@ -177,19 +195,28 @@ namespace Game.TrackManagement
                 }
             }
 
+            var data = raceDriverDatas[car.gameObject.GetInstanceID()];
+
             int lastIndex = waypoints.Length - 1;
+
+            Vector3 direction = (waypoints[closestWayPtIndex].position - car.transform.position).normalized;
+            int backIndex = (Vector3.Dot(car.transform.forward, direction) < 0) ? closestWayPtIndex : closestWayPtIndex - 1;
+            backIndex = Mathf.Max(0, backIndex);
+
+            int frontIndex = (backIndex + 1 >= waypoints.Length) ? 0 : backIndex + 1;
+
+            float lerpDelta = Vector3.SqrMagnitude(car.transform.position - waypoints[backIndex].position) / Vector3.SqrMagnitude(car.transform.position - waypoints[frontIndex].position);
+            float lerpedIndex = Mathf.Lerp(backIndex, frontIndex, lerpDelta);
+
             if (closestWayPtIndex == lastIndex && car.Input.y < 0.0f)
             {
                 return -1.0f;
             }
-            var data = raceDriverDatas[car.gameObject.GetInstanceID()];
-
-            
 
             switch (raceType)
             {
                 case RaceType.Sprint:
-                                      float individualSprintPercent = (float)closestWayPtIndex / (float)lastIndex;
+                                      float individualSprintPercent = lerpedIndex / (float)lastIndex;
                                       
                                       data.CompleteProgress = individualSprintPercent;
                                       raceDriverDatas[car.gameObject.GetInstanceID()] = data;
@@ -197,7 +224,7 @@ namespace Game.TrackManagement
                                       return individualSprintPercent;
                 case RaceType.Circuit:
 
-                                      float individualLapPercent = (float)closestWayPtIndex / 
+                                      float individualLapPercent = lerpedIndex / 
                                                                 (float)lastIndex;
 
                                       Debug.Log("Individual Lap Percent: " + individualLapPercent);
@@ -213,7 +240,7 @@ namespace Game.TrackManagement
                                         data.HasCompletedLap = true;
                                       }
 
-                                      float totalPercent = (data.CompletedLaps * lastIndex + closestWayPtIndex) /
+                                      float totalPercent = ((float)(data.CompletedLaps * lastIndex) + lerpedIndex) /
                                                            (float)((lapsCount + 1) * lastIndex);
 
                                       data.CompleteProgress = totalPercent;
@@ -236,18 +263,6 @@ namespace Game.TrackManagement
             randomRacerNames.Add("Mangu");
             randomRacerNames.Add("Timka");
             randomRacerNames.Add("Timki");
-        }
-
-        // Start is called once before the first execution of Update after the MonoBehaviour is created
-        void Start()
-        {
-        
-        }
-
-        // Update is called once per frame
-        void Update()
-        {
-        
         }
     }
 }
