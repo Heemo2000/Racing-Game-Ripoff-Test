@@ -307,7 +307,11 @@ namespace Game.AI
                                             break;
                     }
 
-                    Vector3 direction = (waypoints.Length == 0 || currentWaypointIndex == -1) ? transform.forward : (waypoints[currentWaypointIndex].position - transform.position).normalized;
+                    Vector3 direction = (waypoints.Length == 0 || 
+                                         currentWaypointIndex == -1 || 
+                                         currentWaypointIndex >= waypoints.Length) ? transform.forward : 
+                                         (waypoints[currentWaypointIndex].position - transform.position).normalized;
+                    
                     float steeringSign = Mathf.Sign(i - middleRayIndex);
 
                     float steerPercent = 1.0f - alignHit.distance / alignCheckDistance;
