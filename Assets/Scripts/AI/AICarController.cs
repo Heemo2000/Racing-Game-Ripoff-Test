@@ -176,7 +176,9 @@ namespace Game.AI
 
             mainFSM.OnLogic();
 
-            HfsmAnimatorGraph.PreviewStateMachineInAnimator(mainFSM, carAnimator);
+            #if UNITY_EDITOR
+                HfsmAnimatorGraph.PreviewStateMachineInAnimator(mainFSM, carAnimator);
+            #endif
         }
 
         private bool IsBlockingForward()
@@ -372,9 +374,12 @@ namespace Game.AI
             driveFSM.AddTransition(new Transition(FORWARD_STATE, REVERSE_STATE, (transition) => (IsTooDeflectedFromWaypoint() || IsBlockingForward())));
             driveFSM.AddTransition(new Transition(REVERSE_STATE, FORWARD_STATE, (transition) => (!IsTooDeflectedFromWaypoint() || IsBlockingBackward())));
 
-            HfsmAnimatorGraph.CreateAnimatorFromStateMachine(mainFSM, 
-                                                             "Assets/DebugAnimators", 
-                                                             "AIControllerAnimator.controller");
+            #if UNITY_EDITOR
+            
+                HfsmAnimatorGraph.CreateAnimatorFromStateMachine(mainFSM, 
+                                                                 "Assets/DebugAnimators", 
+                                                                 "AIControllerAnimator.controller");
+            #endif
         }
 
         

@@ -23,5 +23,9 @@ namespace Game.Driving
 
         [Min(1.0f)]
         public float mass = 10.0f;
+
+        private float tireRotationX = 0.0f;
+
+        public float TireRotationX { get => tireRotationX; set => tireRotationX = value; }
     }
 }

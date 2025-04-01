@@ -30,6 +30,7 @@ namespace Game.TrackManagement
 
         public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnCheckingRacersStarted;
         public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnRacerDataUpdated;
+        public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnPlayerReachesEnd;
         private List<Car> racers;
         
         private List<string> randomRacerNames;
@@ -65,7 +66,7 @@ namespace Game.TrackManagement
 
                 if(car == null)
                 {
-                    Debug.LogError("Cannot initialize race, car reference is null");
+                    //Debug.LogError("Cannot initialize race, car reference is null");
                     return;
                 }
                 car.enabled = false;
@@ -101,12 +102,12 @@ namespace Game.TrackManagement
                 //car.enabled = true;
                 if(car.TryGetComponent<Player>(out Player player))
                 {
-                    Debug.Log("Enable player component");
+                    //Debug.Log("Enable player component");
                     player.AllowInput = true;
                 }
                 else if(car.TryGetComponent<AICarController>(out AICarController controller))
                 {
-                    Debug.Log("Enable controller component");
+                    //Debug.Log("Enable controller component");
                     controller.FollowWaypointEnabled = true;
                 }
             }
@@ -126,13 +127,14 @@ namespace Game.TrackManagement
                     }
                     float percent = FindRiderCompleteProgress(car);
 
-                    Debug.Log("Complete Percent for " + car.transform.name + " :" + percent);
+                    //Debug.Log("Complete Percent for " + car.transform.name + " :" + percent);
 
                     if(percent == 1.0f)
                     {
                         if(car.TryGetComponent<Player>(out Player player))
                         {
                             player.AllowInput = false;
+                            OnPlayerReachesEnd?.Invoke(raceDriverDatas.Values);
                         }
                         else if(car.TryGetComponent<AICarController>(out AICarController controller))
                         {
@@ -160,8 +162,7 @@ namespace Game.TrackManagement
                 yield return wait;
             }
 
-            
-            Debug.Log("All racers reached end line");
+            //Debug.Log("All racers reached end line");
         }
 
         private bool DoAllRacersReachedEnd()
@@ -227,7 +228,7 @@ namespace Game.TrackManagement
                                       float individualLapPercent = lerpedIndex / 
                                                                 (float)lastIndex;
 
-                                      Debug.Log("Individual Lap Percent: " + individualLapPercent);
+                                      //Debug.Log("Individual Lap Percent: " + individualLapPercent);
                                       
                                       if(data.HasCompletedLap == true && individualLapPercent != 1.0f && individualLapPercent >= 0.5f)
                                       {
@@ -240,8 +241,14 @@ namespace Game.TrackManagement
                                         data.HasCompletedLap = true;
                                       }
 
-                                      float totalPercent = ((float)(data.CompletedLaps * lastIndex) + lerpedIndex) /
-                                                           (float)((lapsCount + 1) * lastIndex);
+
+                                      float completedIndices = (float)(data.CompletedLaps * lastIndex);
+                                      if(individualLapPercent < 0.99f)
+                                      {
+                                            completedIndices += lerpedIndex;
+                                      }
+                                      float totalPercent = completedIndices /
+                                                           (float)((lapsCount) * lastIndex);
 
                                       data.CompleteProgress = totalPercent;
                                       raceDriverDatas[car.gameObject.GetInstanceID()] = data;

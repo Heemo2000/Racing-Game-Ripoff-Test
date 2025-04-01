@@ -1,0 +1,5 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <engine:VisualElement name="Root" style="flex-grow: 1;">
+        <engine:Label text="sfgsfg" double-click-selects-word="false" triple-click-selects-line="false" display-tooltip-when-elided="false" name="WinStatus" style="top: 25%; left: 15%; justify-content: center; -unity-font-definition: url(&quot;project://database/Assets/Fonts/Jost-Regular.ttf?fileID=12800000&amp;guid=476ab092dc82cc544b1993a4f7451db7&amp;type=3#Jost-Regular&quot;); font-size: 70%; max-width: 70%; max-height: 50%; min-width: 50%; min-height: 30%; -unity-text-align: middle-center; white-space: normal; -unity-font-style: bold-and-italic; flex-basis: 100%;" />
+    </engine:VisualElement>
+</engine:UXML>

@@ -1,6 +1,6 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <engine:VisualElement name="Root" style="flex-grow: 1;">
-        <engine:Label text="1/2" name="LapIndicator" style="top: 15%; left: 10%; width: 20%; height: 20%; min-width: 10%; min-height: 10%; max-width: 20%; max-height: 20%; -unity-font-definition: resource(&apos;FlatSkin/Font/Roboto-Black&apos;); font-size: 120%; -unity-font-style: italic; -unity-text-align: upper-center;" />
-        <engine:ScrollView horizontal-scroller-visibility="Hidden" language-direction="Inherit" vertical-scroller-visibility="Hidden" name="RaceDriverStatuses" style="top: 0; left: 70%; width: 25%; min-width: 20%; max-width: 25%; height: auto;" />
+        <engine:Label text="1/2" name="LapIndicator" style="top: 15%; left: 10%; width: 20%; height: 20%; min-width: 10%; min-height: 10%; max-width: 20%; max-height: 20%; -unity-font-definition: url(&quot;project://database/Assets/Fonts/Jost-Regular.ttf?fileID=12800000&amp;guid=476ab092dc82cc544b1993a4f7451db7&amp;type=3#Jost-Regular&quot;); font-size: 120%; -unity-font-style: bold-and-italic; -unity-text-align: upper-center; flex-basis: 100%;" />
+        <engine:ScrollView horizontal-scroller-visibility="Hidden" language-direction="Inherit" vertical-scroller-visibility="Hidden" name="RaceDriverStatuses" style="top: 0; left: auto; width: 35%; min-width: 20%; max-width: 100%; height: auto; right: -60%; flex-basis: 100%;" />
     </engine:VisualElement>
 </engine:UXML>

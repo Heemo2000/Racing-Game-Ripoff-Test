@@ -56,7 +56,12 @@ namespace Game.Driving
         [SerializeField] private float accelerateInputTime = 1.0f;
 
         [SerializeField] private float gravity = 10.0f;
-        
+
+        [Tooltip("Speed at which visual of wheel rotate in their X axis.")]
+        [Min(1.0f)]
+        [SerializeField] private float maxFakeWheelSpeed = 50.0f;
+
+        [SerializeField] private AnimationCurve fakeSpeedCurve;
         [Tooltip("Max torque of car in N-m")]
         [Min(1.0f)]
         [SerializeField] private float maxTorque = 1000.0f;
@@ -105,7 +110,6 @@ namespace Game.Driving
         private float rearTrack = 0.0f;
         
         private Coroutine dampingCoroutine = null;
-
         public Vector2 Input { get => input; set => input = value; }
         public bool IsGrounded { get => Vector3.Dot(transform.up, Vector3.up) > 0.0f; }
 
@@ -123,6 +127,18 @@ namespace Game.Driving
         private float GetCurrentSpeed()
         {
             return Vector3.Dot(transform.forward, carRB.linearVelocity);
+        }
+
+        private float GetAcceleratingDirection()
+        {
+            float currentSpeed = GetCurrentSpeed();
+
+            if(currentSpeed == 0.0f)
+            {
+                return 0.0f;
+            }
+
+            return Mathf.Sign(currentSpeed);
         }
 
         private float GetNormalizedSpeed()
@@ -351,13 +367,37 @@ namespace Game.Driving
 
         private void HandleWheelGraphics(WheelData data)
         {
-            if (data != null && data.suspension != null)
+            if(data == null || data.suspension == null)
             {
-                Vector3 wheelAngle = data.suspension.localEulerAngles;
-                wheelAngle.x = 0.0f;
-                wheelAngle.z = 0.0f;
-                data.wheelGraphic.localEulerAngles = wheelAngle;
+                return;
             }
+
+            Quaternion wheelRotation = data.suspension.localRotation;
+
+            data.TireRotationX += GetAcceleratingDirection() *
+                                  maxFakeWheelSpeed *
+                                  fakeSpeedCurve.Evaluate(GetNormalizedSpeed()) *
+                                  Time.deltaTime;
+
+            wheelRotation *= Quaternion.AngleAxis(data.TireRotationX,
+                                                  Vector3.right);
+            
+            data.wheelGraphic.localRotation = wheelRotation;
+
+            bool didHitGround = Physics.Raycast(data.suspension.position,
+                                               -data.suspension.up,
+                                                out hit,
+                                                data.radius,
+                                                detectGroundLayerMask.value);
+
+
+            Vector3 wheelPosition = data.suspension.position;
+            if(didHitGround)
+            {
+                wheelPosition = hit.point + data.suspension.up * data.radius;
+            }
+
+            data.wheelGraphic.position = wheelPosition;
         }
 
         private void HandleOrientation()
