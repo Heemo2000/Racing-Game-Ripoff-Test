@@ -311,7 +311,8 @@ namespace Game.AI
                     float steeringSign = Mathf.Sign(i - middleRayIndex);
 
                     float steerPercent = 1.0f - alignHit.distance / alignCheckDistance;
-                    float actualSteerAmount = Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
+                    float angle = Vector3.SignedAngle(forwardVec, direction, transform.up);
+                    float actualSteerAmount = Mathf.Abs(angle) / Mathf.Max(NormalLeftWheelAngle, NormalRightWheelAngle);//Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
 
                     if(steeringSign == 0 || !hitSomething)
                     {
