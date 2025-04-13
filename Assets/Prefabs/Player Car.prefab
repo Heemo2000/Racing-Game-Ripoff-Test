@@ -685,7 +685,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  forwardSpeed: 50
+  forwardSpeed: 60
   reverseSpeed: 10
   turnRadius: 10.79999
   antiRollbarEnabled: 1

@@ -12,6 +12,8 @@ namespace Game.UI
     {
         [SerializeField] private VisualTreeAsset inGameScreen;
         [SerializeField] private VisualTreeAsset raceDriverUI;
+
+
         private UIDocument uiDocument;
         private VisualElement inGameScreenInstance = null;
         private Label lapIndicator;
@@ -100,6 +102,8 @@ namespace Game.UI
                 i++;
             }
         }
+
+
 
         private void Awake()
         {

@@ -1,0 +1,34 @@
+{
+    "name": "ExplicitCameraControls",
+    "maps": [
+        {
+            "name": "Camera",
+            "id": "72062b5d-1714-477e-ad6b-92d1d823821e",
+            "actions": [
+                {
+                    "name": "ChangeCamera",
+                    "type": "Button",
+                    "id": "004eb674-d86c-4932-8814-1d3c4954d363",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "9f314240-e9bb-48d4-8959-079b0ea11884",
+                    "path": "<Keyboard>/c",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ChangeCamera",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}

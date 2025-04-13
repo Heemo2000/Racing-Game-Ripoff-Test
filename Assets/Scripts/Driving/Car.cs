@@ -112,6 +112,8 @@ namespace Game.Driving
         private Coroutine dampingCoroutine = null;
         public Vector2 Input { get => input; set => input = value; }
         public bool IsGrounded { get => Vector3.Dot(transform.up, Vector3.up) > 0.0f; }
+        public float ForwardSpeed { get => forwardSpeed; set => forwardSpeed = value; }
+        public float ReverseSpeed { get => reverseSpeed; set => reverseSpeed = value; }
 
         public float GetNormalLeftWheelAngle()
         {
@@ -124,12 +126,12 @@ namespace Game.Driving
             float rightWheelAngle = Mathf.Rad2Deg * Mathf.Atan(wheelBase / (turnRadius - (rearTrack / 2.0f)));
             return rightWheelAngle;
         }
-        private float GetCurrentSpeed()
+        public float GetCurrentSpeed()
         {
             return Vector3.Dot(transform.forward, carRB.linearVelocity);
         }
 
-        private float GetAcceleratingDirection()
+        public float GetAcceleratingDirection()
         {
             float currentSpeed = GetCurrentSpeed();
 
@@ -141,7 +143,7 @@ namespace Game.Driving
             return Mathf.Sign(currentSpeed);
         }
 
-        private float GetNormalizedSpeed()
+        public float GetNormalizedSpeed()
         {
             return Mathf.Clamp01(Mathf.Abs(GetCurrentSpeed()) /
                                                  ((currentInput.y >= 0.0f) ? forwardSpeed : reverseSpeed));

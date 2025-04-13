@@ -882,15 +882,15 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0.25154132
       value: 1
-      inSlope: 0
-      outSlope: 0
+      inSlope: 0.013582152
+      outSlope: 0.013582152
       tangentMode: 136
       weightedMode: 0
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.65104806
-      value: 1
+      time: 0.44453263
+      value: 1.0015094
       inSlope: 0
       outSlope: 0
       tangentMode: 136
@@ -958,18 +958,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   waypointChangeDist: 35
   speedReduceDistance: 50
-  cornerCheckMinAngle: 15
+  cornerCheckMinAngle: 20
   waypointCheckAngle: 70
   followWaypointEnabled: 1
   waypoints: []
-  alignCheckDistance: 48
-  alignCheckAngle: 180
+  allowAlignWithTrack: 1
+  alignWithTrackSpeed: 20
+  alignCheckDistance: 10
+  alignCheckWidth: 8
   alignCheckLayerMask:
     serializedVersion: 2
     m_Bits: 137
   alignCastType: 1
-  alignCheckRayCount: 8
+  alignCheckRayCount: 6
   alignCheckTime: 0.1
+  alignCheckRadius: 0.5
   ignoreInputRange: 0.05
   frontCheckOffset: {x: 0, y: 1, z: 5.1}
   rearCheckOffset: {x: 0, y: 1, z: -5.1}
@@ -978,7 +981,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 137
   blockCheckRayCount: 1
-  blockCheckAngle: 90
+  blockCheckWidth: 5
   blockCheckTime: 0.5
   deflectionCheckAngle: 180
   deflectionCheckTime: 0.5

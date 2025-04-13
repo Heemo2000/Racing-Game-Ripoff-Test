@@ -94,15 +94,18 @@ namespace Game.AI
 
             calculatedInput.y = slowdownAccInput;
 
+            
             float wayPtSqrDistance = Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheckPos);
-
+            
             float dot = Vector3.Dot(direction ,controller.Waypoints[controller.CurrentWaypointIndex].forward);
 
-            if(dot < 0 || wayPtSqrDistance <= controller.WaypointChangeDist * controller.WaypointChangeDist)
+            if(dot < 0.0f || wayPtSqrDistance <= controller.WaypointChangeDist * controller.WaypointChangeDist)
             {
                 controller.CurrentWaypointIndex++;
             }
+            
 
+            
             //calculatedInput.Normalize();
             controller.SetInput(calculatedInput.x, calculatedInput.y);
         }
@@ -112,11 +115,56 @@ namespace Game.AI
             
         }
 
-        private bool IsReachingCorner(out float slowdownAcceleratingInput)
+        private int GetNearestWaypointIndex()
+        {
+            int nearestIndex = -1;
+            Vector3 currentWaypointPos = Vector3.zero;
+            Vector3 direction = Vector3.zero;
+            float wayPtSqrDistance = 0.0f;
+
+            for (int i = 0; i < controller.Waypoints.Length; i++)
+            {
+                currentWaypointPos = controller.Waypoints[i].position;
+
+                direction = (currentWaypointPos - carTransform.position).normalized;
+                
+                float dot = Vector3.Dot(direction, controller.Waypoints[controller.CurrentWaypointIndex].forward);
+
+                wayPtSqrDistance = Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheckPos);
+
+                if (dot >= 0.0f && wayPtSqrDistance < controller.WaypointChangeDist * controller.WaypointChangeDist)
+                {
+                    nearestIndex = i;
+                    break;
+                }
+            }
+
+            if(nearestIndex != -1)
+            {
+                return nearestIndex;
+            }
+
+            float nearestSqrDistance = float.MaxValue;
+            for (int i = 0; i < controller.Waypoints.Length; i++)
+            {
+                currentWaypointPos = controller.Waypoints[i].position;
+                wayPtSqrDistance = Vector3.SqrMagnitude(currentWaypointPos - controller.FrontCheckPos);
+
+                if(nearestSqrDistance > wayPtSqrDistance)
+                {
+                    nearestIndex = i;
+                    nearestSqrDistance = wayPtSqrDistance;
+                }
+            }
+
+            return nearestIndex;
+        }
+
+        private bool IsReachingCorner(out float requiredAccelerationInput)
         {
             if(controller.CurrentWaypointIndex + 1 >= controller.Waypoints.Length)
             {
-                slowdownAcceleratingInput = 1.0f;
+                requiredAccelerationInput = 1.0f;
                 return false;
             }
 
@@ -138,11 +186,11 @@ namespace Game.AI
             
             if (!(angle >= -controller.CornerCheckMinAngle/2.0f && angle <= controller.CornerCheckMinAngle/2.0f) && sqrDistance <= speedReduceDistSqr)
             {
-                slowdownAcceleratingInput = sqrDistance / speedReduceDistSqr;
+                requiredAccelerationInput =  Mathf.Max(-(1.0f - Mathf.Clamp01(sqrDistance / speedReduceDistSqr)), 0.3f);
                 return true;
             }
 
-            slowdownAcceleratingInput = 1.0f;
+            requiredAccelerationInput = 1.0f;
             return false;
         }
     }

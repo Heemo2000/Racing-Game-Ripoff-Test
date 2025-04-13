@@ -40,12 +40,15 @@ namespace Game.AI
 
         [Space(10.0f)]
         [Header("Align with track Settings: ")]
-        
+
+        [SerializeField] private bool allowAlignWithTrack = true;
+        [Min(0.1f)]
+        [SerializeField] private float alignWithTrackSpeed = 5.0f;
         [Min(0.1f)]
         [SerializeField] private float alignCheckDistance = 5.0f;
 
-        [Min(30.0f)]
-        [SerializeField] private float alignCheckAngle = 60.0f;
+        [Min(0.1f)]
+        [SerializeField] private float alignCheckWidth = 2.0f;
 
         [SerializeField] private LayerMask alignCheckLayerMask;
         [SerializeField] private CastType alignCastType = CastType.Ray;
@@ -55,9 +58,13 @@ namespace Game.AI
 
         [Range(0.1f, 2.0f)]
         [SerializeField] private float alignCheckTime = 0.5f;
-        
+
+        [Min(0.001f)]
+        [SerializeField] private float alignCheckRadius = 0.5f;
+
         [Range(0.01f, 0.2f)]
         [SerializeField] private float ignoreInputRange = 0.15f;
+        
 
         [Space(10.0f)]
         [Header("Block Settings: ")]
@@ -73,8 +80,8 @@ namespace Game.AI
         [Min(1)]
         [SerializeField] private int blockCheckRayCount = 3;
         
-        [Range(60.0f, 180.0f)]
-        [SerializeField] private float blockCheckAngle = 90.0f;
+        [Range(0.1f, 30.0f)]
+        [SerializeField] private float blockCheckWidth = 5.0f;
 
         [Min(0.01f)]
         [SerializeField] private float blockCheckTime = 2.0f;
@@ -105,7 +112,9 @@ namespace Game.AI
         private int currentWaypointIndex = -1;
 
         private float[] interest;
-        private bool[] danger;
+        private float[] danger;
+        //private bool[] danger;
+
         private Coroutine interestAndDangerCoroutine = null;
         private RaycastHit alignHit;
         private float currentBlockTime = 0.0f;
@@ -141,20 +150,6 @@ namespace Game.AI
 
         public float GetAlignedSteeringInput()
         {
-            requiredSteeringInput = 0.0f;
-
-            int middleRayIndex = (alignCheckRayCount == 1) ? 0 : Mathf.CeilToInt(alignCheckRayCount / 2.0f);
-
-            for (int i = 0; i < alignCheckRayCount; i++)
-            {
-                float currentInterest = interest[i];
-                if (currentInterest == 0.0f)
-                {
-                    continue;
-                }
-                requiredSteeringInput += currentInterest; 
-            }
-
             return requiredSteeringInput;
         }
 
@@ -193,10 +188,10 @@ namespace Game.AI
             forwardBlocked = CheckObstacles(FrontCheckPos,
                                   transform.forward,
                                   blockCheckRayCount,
-                                  blockCheckAngle,
+                                  blockCheckWidth,
                                   blockingCheckDistance,
                                   blockCheckLayerMask.value);
-            return forwardBlocked;
+            return forwardBlocked && car.GetNormalizedSpeed() > 0.5f;
         }
 
         private bool IsBlockingBackward()
@@ -212,7 +207,7 @@ namespace Game.AI
             backwardBlocked = CheckObstacles(RearCheckPos,
                                   transform.forward,
                                   blockCheckRayCount,
-                                  blockCheckAngle,
+                                  blockCheckWidth,
                                   blockingCheckDistance,
                                   blockCheckLayerMask.value);
 
@@ -242,17 +237,17 @@ namespace Game.AI
             return deflected;
         }
 
-        private bool CheckObstacles(Vector3 origin, Vector3 direction, int rayCount, float checkAngle, 
+        private bool CheckObstacles(Vector3 origin, Vector3 direction, int rayCount, float checkWidth, 
                                     float checkDistance, LayerMask obstacleLayerMask)
         {
             for (int i = 0; i < rayCount; i++)
             {
-                float requiredAngle = Mathf.Lerp(-checkAngle / 2.0f, checkAngle / 2.0f,
-                                                 (rayCount == 1) ? 0.5f : i / (float)(rayCount - 1));
+                Vector3 startPosition = Vector3.Lerp(origin - transform.right * checkWidth / 2.0f,
+                                                     origin + transform.right * checkWidth / 2.0f,
+                                                     (i == rayCount / 2) ? 0.5f : 
+                                                     (float)i / (float)(rayCount - 1));
 
-                Vector3 angleDirection = Quaternion.AngleAxis(requiredAngle, transform.up) * direction;
-
-                if (Physics.Raycast(origin, angleDirection, checkDistance, obstacleLayerMask.value))
+                if (Physics.Raycast(startPosition, direction, checkDistance, obstacleLayerMask.value))
                 {
                     return true;
                 }
@@ -264,12 +259,14 @@ namespace Game.AI
         private void ResetInterestAndDanger()
         {
             interest = new float[alignCheckRayCount];
-            danger = new bool[alignCheckRayCount];
+            danger = new float[alignCheckRayCount];
+            //danger = new bool[alignCheckRayCount];
 
             for(int i = 0; i < alignCheckRayCount; i++)
             {
                 interest[i] = 0.0f;
-                danger[i] = false;
+                danger[i] = 0.0f;
+                //danger[i] = false;
             }
         }
 
@@ -279,8 +276,9 @@ namespace Game.AI
 
             while(this.enabled)
             {
-                if(currentWaypointIndex == -1)
+                if(currentWaypointIndex == -1 || !followWaypointEnabled)
                 {
+
                     yield return null;
                     continue;
                 }
@@ -288,22 +286,36 @@ namespace Game.AI
 
                 for (int i = 0; i < alignCheckRayCount; i++)
                 {
-                    float requiredAngle = Mathf.Lerp(-alignCheckAngle / 2.0f,
-                                                      alignCheckAngle / 2.0f,
-                                                      (alignCheckRayCount == 1) ? 0.5f : i / (float)(alignCheckRayCount - 1));
+                    if(!allowAlignWithTrack || driveFSM.ActiveState.name.Equals(REVERSE_STATE))
+                    {
+                        interest[i] = 0.0f;
+                        yield return null;
+                        continue;
+                    }
 
-                    Vector3 forwardVec = Quaternion.AngleAxis(requiredAngle, transform.up) * transform.forward;
+                    else if(i == middleRayIndex && (alignCheckRayCount % 2) == 1)
+                    {
+                        interest[i] = 0.0f;
+                        continue;
+                    }
+
+                    interest[i] = 0.0f;
+
+                    Vector3 requiredPosition = Vector3.Lerp(FrontCheckPos - transform.right * alignCheckWidth / 2.0f,
+                                                            FrontCheckPos + transform.right * alignCheckWidth / 2.0f,
+                                                            (alignCheckRayCount == 1) ? 0.5f : i / (float)(alignCheckRayCount - 1));
+                    Vector3 forwardVec = transform.forward;
 
                     bool hitSomething = false;
 
                     switch(alignCastType)
                     {
                         case CastType.Ray:
-                                            hitSomething = Physics.Raycast(FrontCheckPos, forwardVec, out alignHit ,alignCheckDistance, alignCheckLayerMask.value);
+                                            hitSomething = Physics.Raycast(requiredPosition, forwardVec, out alignHit ,alignCheckDistance, alignCheckLayerMask.value);
                                             break;
 
                         case CastType.Sphere:
-                                            hitSomething = Physics.SphereCast(new Ray(FrontCheckPos, forwardVec), 0.5f, out alignHit, alignCheckDistance, alignCheckLayerMask.value);
+                                            hitSomething = Physics.SphereCast(new Ray(requiredPosition, forwardVec), alignCheckRadius, out alignHit, alignCheckDistance, alignCheckLayerMask.value);
                                             break;
                     }
 
@@ -314,42 +326,60 @@ namespace Game.AI
                     
                     float steeringSign = Mathf.Sign(i - middleRayIndex);
 
-                    float steerPercent = 1.0f - alignHit.distance / alignCheckDistance;
                     float angle = Vector3.SignedAngle(forwardVec, direction, transform.up);
-                    float actualSteerAmount = Mathf.Abs(angle) / Mathf.Max(NormalLeftWheelAngle, NormalRightWheelAngle);//Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
+                    float actualSteerAmount = Mathf.Clamp(Mathf.Abs(angle) / Mathf.Max(NormalLeftWheelAngle, NormalRightWheelAngle), -1.0f, 1.0f); //Mathf.Clamp(1.0f - Vector3.Dot(forwardVec, direction), -1.0f, 1.0f);
+                    float avoidSteerAmount = (hitSomething == true) ? Mathf.Clamp01(1.0f - alignHit.distance/alignCheckDistance) : 0.0f;
 
-                    if(steeringSign == 0 || !hitSomething)
+                    danger[i] = (avoidSteerAmount >= 0.5f) ? 1.0f : 0.0f;
+                    float requiredInterest = steeringSign * actualSteerAmount;
+                    //danger[i] = hitSomething;
+
+                    //interest[i] -= danger[i];
+                    /*if (danger[i] > 0.0f)
                     {
-                        interest[i] = 0.0f;
+                        interest[i] -= danger[i];
+                    }*/
+
+                    /*if(requiredInterest > danger[i])
+                    {
+                        requiredInterest -= danger[i];
                     }
                     else
                     {
-                        interest[i] = steeringSign * steerPercent * actualSteerAmount;
-                    }
-
-                    danger[i] = hitSomething == true;
-
-                    if (danger[i] == true)
+                        requiredInterest = 0.0f;
+                    }*/
+                    if (danger[i] > 0.0f)
                     {
-                        interest[i] = 0.0f;
+                        requiredInterest = 0.0f;
                     }
+
+                    interest[i] = requiredInterest;
+                }
+
+                requiredSteeringInput = 0.0f;
+
+                for (int i = 0; i < alignCheckRayCount; i++)
+                {
+                    float currentInterest = interest[i];
+                    requiredSteeringInput += currentInterest;
                 }
 
                 yield return wait;
             }
         }
 
-        private void DrawSensorRangeGizmos(Vector3 origin, Vector3 direction, int rayCount, float checkAngle,
-                                    float checkDistance)
+        private void DrawSensorRangeGizmos(Vector3 origin, Vector3 direction, int rayCount, float checkWidth,
+                                    float checkDistance, float endSphereRadius = 0.0f)
         {
             for (int i = 0; i < rayCount; i++)
             {
-                float requiredAngle = Mathf.Lerp(-checkAngle / 2.0f, checkAngle / 2.0f,
-                                                 (rayCount == 1) ? 0.5f : i / (float)(rayCount - 1));
+                Vector3 startPos = Vector3.Lerp(origin - transform.right * checkWidth / 2.0f,
+                                                     origin + transform.right * checkWidth / 2.0f,
+                                                     (i == rayCount / 2) ? 0.5f :
+                                                     (float)i / (float)(rayCount - 1));
 
-                Vector3 angleDirection = Quaternion.AngleAxis(requiredAngle, transform.up) * direction;
-
-                Gizmos.DrawLine(origin, origin + angleDirection * checkDistance);
+                Vector3 endPos = startPos + direction * checkDistance;
+                Gizmos.DrawLine(startPos, endPos);
             }
         }
 
@@ -433,13 +463,13 @@ namespace Game.AI
             DrawSensorRangeGizmos(FrontCheckPos,
                                   transform.forward,
                                   blockCheckRayCount,
-                                  blockCheckAngle,
+                                  blockCheckWidth,
                                   blockingCheckDistance);
 
             DrawSensorRangeGizmos(RearCheckPos,
                                   -transform.forward,
                                   blockCheckRayCount,
-                                  blockCheckAngle,
+                                  blockCheckWidth,
                                   blockingCheckDistance);
 
             //Show align with track gizmos.
@@ -448,8 +478,9 @@ namespace Game.AI
             DrawSensorRangeGizmos(FrontCheckPos + transform.up * 0.1f,
                                   transform.forward,
                                   alignCheckRayCount,
-                                  alignCheckAngle,
-                                  alignCheckDistance);
+                                  alignCheckWidth,
+                                  alignCheckDistance,
+                                  alignCheckRadius);
 
             #if UNITY_EDITOR
 
@@ -462,7 +493,7 @@ namespace Game.AI
 
             #endif
 
-            if (waypoints != null && waypoints.Length > 0)
+            /*if (waypoints != null && waypoints.Length > 0)
             {
                 Gizmos.color = Color.magenta;
 
@@ -473,7 +504,7 @@ namespace Game.AI
 
                     Gizmos.DrawLine(previousWayPt, currentWayPt);
                 }
-            }
+            }*/
 
         }
     }

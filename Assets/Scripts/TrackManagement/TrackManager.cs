@@ -17,7 +17,6 @@ namespace Game.TrackManagement
         [SerializeField] private AICarSpawner carSpawner;
         [SerializeField] private Transform[] spawnPoints;
         [SerializeField] private Player playerPrefab;
-        [SerializeField] private CinemachineCamera playerFollowCameraPrefab;
         [SerializeField] private RaceType raceType;
         [Min(2)]
         [SerializeField] private int lapsCount = 2;
@@ -31,11 +30,15 @@ namespace Game.TrackManagement
         public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnCheckingRacersStarted;
         public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnRacerDataUpdated;
         public UnityEvent<SerializedDictionary<int, RaceDriverData>.ValueCollection> OnPlayerReachesEnd;
+        public UnityEvent<List<Car>> OnRacersSpawned;
+
         private List<Car> racers;
         
         private List<string> randomRacerNames;
         private Transform[] waypoints = null;
         private int tempRanking = 1;
+
+        public List<Car> Racers { get => racers; }
 
         public void InitializeTrack()
         {
@@ -50,11 +53,7 @@ namespace Game.TrackManagement
                     Player player = Instantiate(playerPrefab, spawnPoint.position, Quaternion.identity);
                     player.transform.forward = spawnPoint.forward;
                     player.AllowInput = false;
-                    var playerFollowCamera = Instantiate(playerFollowCameraPrefab,
-                                                          spawnPoint.position,
-                                                          Quaternion.identity);
-                    playerFollowCamera.Follow = player.transform;
-                    playerFollowCamera.LookAt = player.transform;
+                    
                     car = player.GetComponent<Car>();
                 }
                 else
@@ -78,6 +77,7 @@ namespace Game.TrackManagement
                 
             }
 
+            OnRacersSpawned?.Invoke(racers);
             StartCoroutine(EnableCarComponent());
         }
 
