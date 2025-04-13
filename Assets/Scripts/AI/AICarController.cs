@@ -260,13 +260,12 @@ namespace Game.AI
         {
             interest = new float[alignCheckRayCount];
             danger = new float[alignCheckRayCount];
-            //danger = new bool[alignCheckRayCount];
 
             for(int i = 0; i < alignCheckRayCount; i++)
             {
                 interest[i] = 0.0f;
                 danger[i] = 0.0f;
-                //danger[i] = false;
+                
             }
         }
 
@@ -332,22 +331,7 @@ namespace Game.AI
 
                     danger[i] = (avoidSteerAmount >= 0.5f) ? 1.0f : 0.0f;
                     float requiredInterest = steeringSign * actualSteerAmount;
-                    //danger[i] = hitSomething;
-
-                    //interest[i] -= danger[i];
-                    /*if (danger[i] > 0.0f)
-                    {
-                        interest[i] -= danger[i];
-                    }*/
-
-                    /*if(requiredInterest > danger[i])
-                    {
-                        requiredInterest -= danger[i];
-                    }
-                    else
-                    {
-                        requiredInterest = 0.0f;
-                    }*/
+                    
                     if (danger[i] > 0.0f)
                     {
                         requiredInterest = 0.0f;
@@ -493,18 +477,7 @@ namespace Game.AI
 
             #endif
 
-            /*if (waypoints != null && waypoints.Length > 0)
-            {
-                Gizmos.color = Color.magenta;
-
-                for(int i = 1; i < waypoints.Length; i++)
-                {
-                    Vector3 currentWayPt = waypoints[i].position;
-                    Vector3 previousWayPt = waypoints[i - 1].position;
-
-                    Gizmos.DrawLine(previousWayPt, currentWayPt);
-                }
-            }*/
+            
 
         }
     }
